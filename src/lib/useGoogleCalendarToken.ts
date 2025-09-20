@@ -9,16 +9,22 @@ declare global {
 
 export function useGoogleCalendarToken() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [expiryTime, setExpiryTime] = useState<number | null>(null); // ⬅️ tambahan
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const tokenClientRef = useRef<any>(null);
 
-  // Load token from localStorage on mount
+  // Load token + expiry dari localStorage
   useEffect(() => {
-    const storedToken = localStorage.getItem('google_access_token');
+    const storedToken = localStorage.getItem("google_access_token");
+    const storedExpiry = localStorage.getItem("google_token_expiry");
+
     if (storedToken) {
       console.log("Loaded access token from localStorage:", storedToken);
       setAccessToken(storedToken);
+    }
+    if (storedExpiry) {
+      setExpiryTime(parseInt(storedExpiry, 10));
     }
   }, []);
 
@@ -26,7 +32,6 @@ export function useGoogleCalendarToken() {
     const initializeGoogleAPI = () => {
       if (!window.google) {
         console.warn("Google API belum dimuat di window.google");
-        // Retry after a short delay
         setTimeout(initializeGoogleAPI, 1000);
         return;
       }
@@ -37,7 +42,7 @@ export function useGoogleCalendarToken() {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         scope: "https://www.googleapis.com/auth/calendar.events",
-        prompt: "", // Changed from "consent" to "" to avoid repeated consent prompts
+        prompt: "",
         callback: (res: any) => {
           console.log("OAuth callback received:", res);
           if (res.error) {
@@ -47,11 +52,17 @@ export function useGoogleCalendarToken() {
           } else {
             console.log("Access token received:", res.access_token);
             setAccessToken(res.access_token);
+
+            // simpan expiry time
+            const expiresIn = res.expires_in ? Date.now() + res.expires_in * 1000 : null;
+            setExpiryTime(expiresIn);
+            if (expiresIn) {
+              localStorage.setItem("google_token_expiry", expiresIn.toString());
+            }
+
             setError(null);
-            // Store token in localStorage
-            localStorage.setItem('google_access_token', res.access_token);
+            localStorage.setItem("google_access_token", res.access_token);
             alert("✅ Google Calendar connected successfully!");
-            // Open Google Calendar after successful connection
             window.open("https://calendar.google.com", "_blank");
           }
         },
@@ -61,18 +72,35 @@ export function useGoogleCalendarToken() {
     initializeGoogleAPI();
   }, []);
 
-  // Save token to localStorage whenever it changes
+  // Simpan token ke localStorage ketika berubah
   useEffect(() => {
     if (accessToken) {
       console.log("Saving access token to localStorage:", accessToken);
-      localStorage.setItem('google_access_token', accessToken);
+      localStorage.setItem("google_access_token", accessToken);
     } else {
       console.log("Removing access token from localStorage");
-      localStorage.removeItem('google_access_token');
+      localStorage.removeItem("google_access_token");
     }
   }, [accessToken]);
 
-  // ini fungsi yang dipanggil tombol
+  // Auto-refresh token sebelum expire
+  useEffect(() => {
+    if (!expiryTime || !tokenClientRef.current) return;
+
+    const now = Date.now();
+    const refreshTime = expiryTime - 60 * 1000; // refresh 1 menit sebelum expired
+
+    if (refreshTime > now) {
+      const timeout = setTimeout(() => {
+        console.log("Refreshing Google access token...");
+        tokenClientRef.current.requestAccessToken({ prompt: "" });
+      }, refreshTime - now);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [expiryTime, tokenClientRef]);
+
+  // fungsi dipanggil tombol
   const requestAccess = () => {
     console.log("Requesting access token...");
     if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {

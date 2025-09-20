@@ -39,6 +39,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: response.data });
   } catch (err: any) {
+    console.error("Google Calendar error:", err);
     return NextResponse.json({ success: false, error: err?.message || "Unknown error" }, { status: 500 });
   }
 }
