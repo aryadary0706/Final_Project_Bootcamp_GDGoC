@@ -1,5 +1,6 @@
 // app/api/chat/message/route.ts
 import { NextResponse } from "next/server";
+import { searchYouTube } from "@/src/lib/youtube";
 import { db } from "@/src/lib/db"; // Sesuaikan path dengan lokasi file db Anda
 
 export async function POST(req: Request) {

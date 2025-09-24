@@ -1,6 +1,6 @@
 // app/api/chat/gemini/route.ts
 import { NextResponse } from "next/server";
-import { db } from "@/src/lib/db"; // Sesuaikan dengan lokasi file db Anda
+ import { db } from "@/src/lib/db"; // Sesuaikan dengan lokasi file db Anda
 
 export const maxDuration = 30;
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     // Simpan response AI ke database
     await db.execute(
       "INSERT INTO message (chat_id, role, content) VALUES (?, ?, ?)",
-      [chatId, "assistant", aiMessage]
+      [chatId, "ai", aiMessage]
     );
 
     return NextResponse.json({ reply: aiMessage });
