@@ -50,7 +50,7 @@ export default function Page() {
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
-
+    setInput("")
     let chatId = currentChatId;
 
     // Jika belum ada chat yang aktif, wajib membuat/ memilih chat terlebih dahulu
@@ -63,8 +63,18 @@ export default function Page() {
     const educationPrefix = educationLevel ? `[Halo, aku di tingkat: ${educationLevel}]\n` : '';
     const messageWithEducation = educationPrefix + input;
 
+    // List keyword untuk trigger calendar
+    const ListCalendarMessages = [
+      "buat jadwal",
+      "jadwalkan",
+      "kalendar",
+      "meeting",
+      "jadwal",
+      "schedule",
+    ]
+
     // Deteksi intent 
-    if (input.toLowerCase().includes("buat jadwal")) {
+    if (ListCalendarMessages.some(keyword => input.toLowerCase().includes(keyword))) {
       const token = accessToken || localStorage.getItem('google_access_token');
       if (!token) {
         alert("❌ Silakan connect ke Google Calendar terlebih dahulu dengan klik tombol 'Connect Google Calendar'");
@@ -287,28 +297,6 @@ export default function Page() {
           </ScrollArea.Scrollbar>
           <ScrollArea.Corner className="bg-gray-200" />
         </ScrollArea.Root>
-
-        {/* Card Buttons */}
-        <div className="flex gap-2 p-3 border-t bg-gray-50">
-          <button
-            onClick={() => handleQuickMessage("Buatkan saya soal latihan dari topik yang dibahas")}
-            className="px-3 py-2 rounded-lg text-sm bg-green-500 text-white hover:bg-green-600"
-          >
-            + Soal
-          </button>
-          <button
-            onClick={() => handleQuickMessage("Buatkan flashcard untuk membantu saya belajar topik ini")}
-            className="px-3 py-2 rounded-lg text-sm bg-purple-500 text-white hover:bg-purple-600"
-          >
-            + Flashcard
-          </button>
-          <button
-            onClick={() => handleQuickMessage("Buatkan pertanyaan reflektif untuk membantu saya memahami topik ini lebih dalam")}
-            className="px-3 py-2 rounded-lg text-sm bg-orange-500 text-white hover:bg-orange-600"
-          >
-            + Reflective Q
-          </button>
-        </div>
 
         <Separator.Root className="bg-gray-200 h-px w-full" />
 

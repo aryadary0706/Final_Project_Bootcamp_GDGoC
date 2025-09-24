@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     }));
 
     // Panggil API Gemini dengan riwayat lengkap
-    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -42,6 +42,11 @@ export async function POST(req: Request) {
     );
 
     const data = await response.json();
+
+    if (!response.ok || data.error) {
+      console.error("Gemini API Error:", data);
+      throw new Error("Terjadi kesalahan saat memanggil Gemini API");
+    }
 
     const aiMessage =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
