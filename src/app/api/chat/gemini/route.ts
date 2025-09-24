@@ -1,69 +1,66 @@
-// app/api/chat/gemini/route.ts
-import { NextResponse } from "next/server";
- import { db } from "@/src/lib/db"; // Sesuaikan dengan lokasi file db Anda
+  // app/api/chat/gemini/route.ts
+  import { google } from "@ai-sdk/google";
+  import { streamText } from "ai";
+  import { NextResponse } from "next/server";
+  import { db } from "@/src/lib/db";
+  import { createCalendarEvent } from "@/src/lib/createCalendarEvent";
 
-export const maxDuration = 30;
+  export const maxDuration = 30;
 
-export async function POST(req: Request) {
-  try {
-    const { message, chatId } = await req.json();
+  export async function POST(req: Request) {
+    try {
+      const { message, chatId, educationLevel } = await req.json();
 
-    if (!chatId) {
-      return NextResponse.json({ error: "chatId diperlukan" }, { status: 400 });
-    }
-
-    // Simpan pesan user ke database
-    await db.execute(
-      "INSERT INTO message (chat_id, role, content) VALUES (?, ?, ?)",
-      [chatId, "user", message]
-    );
-
-    // Ambil seluruh riwayat percakapan berdasarkan chatId
-    const [rows]: any = await db.query(
-      "SELECT role, content FROM message WHERE chat_id = ? ORDER BY id ASC",
-      [chatId]
-    );
-
-    // Ubah riwayat ke format Gemini
-    const contents = rows.map((msg: any) => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: msg.content }],
-    }));
-
-    // Panggil API Gemini dengan riwayat lengkap
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents }),
+      if (!chatId) {
+        return NextResponse.json({ error: "chatId diperlukan" }, { status: 400 });
       }
-    );
 
-    const data = await response.json();
+      // Simpan pesan user ke DB
+      await db.execute(
+        "INSERT INTO message (chat_id, role, content) VALUES (?, ?, ?)",
+        [chatId, "user", message]
+      );
 
-    if (!response.ok || data.error) {
-      console.error("Gemini API Error:", data);
-      throw new Error("Terjadi kesalahan saat memanggil Gemini API");
+      // Ambil riwayat percakapan
+      const [rows]: any = await db.query(
+        "SELECT role, content FROM message WHERE chat_id = ? ORDER BY id ASC",
+        [chatId]
+      );
+
+      // Mapping DB messages ke format model
+      const messages = rows.map((m: any) => ({
+        role: m.role === "ai" ? "assistant" : "user",
+        content: m.content,
+      }));
+
+      // Tambahkan prompt (konteks) sebagai system role
+      messages.unshift({
+        role: "system",
+        content: `Kamu adalah tutor AI yang menjelaskan sesuai tingkat pendidikan ${educationLevel}. Gunakan bahasa yang cocok untuk siswa di tingkat tersebut.`
+      });
+
+      // Jalankan AI SDK
+      const result = streamText({
+        model: google(process.env.GEMINI_MODEL || "models/gemini-1.5-flash"),
+        messages
+      });
+
+      // Ambil teks final
+      const replyText = await result.text;
+
+      // Simpan balasan AI ke DB
+      await db.execute(
+        "INSERT INTO message (chat_id, role, content) VALUES (?, ?, ?)",
+        [chatId, "ai", replyText]
+      );
+
+      return NextResponse.json({ reply: replyText });
+    } catch (error) {
+      console.error("Error in Gemini chat:", error);
+      return NextResponse.json(
+        { reply: "Terjadi kesalahan dalam memproses permintaan." },
+        { status: 500 }
+      );
     }
-
-    const aiMessage =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Maaf, saya tidak bisa menjawab sekarang.";
-
-    // Simpan response AI ke database
-    await db.execute(
-      "INSERT INTO message (chat_id, role, content) VALUES (?, ?, ?)",
-      [chatId, "ai", aiMessage]
-    );
-
-    return NextResponse.json({ reply: aiMessage });
-  } catch (error) {
-    console.error("Error in Gemini chat:", error);
-    return NextResponse.json(
-      { reply: "Terjadi kesalahan dalam memproses permintaan." },
-      { status: 500 }
-    );
   }
-}
+

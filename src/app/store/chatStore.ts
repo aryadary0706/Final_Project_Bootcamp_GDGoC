@@ -33,7 +33,7 @@ interface ChatState {
   createNewChat: (title?: string) => Promise<number | null>;
   loadMessages: (chatId: number) => Promise<void>;
   loadChats: () => Promise<void>;
-  sendMessage: (message: string, chatId: number) => Promise<void>;
+  sendMessage: (message: string, chatId: number, educationLevel: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
