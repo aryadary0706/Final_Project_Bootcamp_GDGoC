@@ -73,6 +73,24 @@ export default function Page() {
       "schedule",
     ]
 
+    const getRelativeDate = (keyword: string) => {
+      const today = new Date();
+      if (keyword === "hari ini") {
+        return today.toISOString().slice(0, 10);
+      }
+      if (keyword === "besok") {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        return tomorrow.toISOString().slice(0, 10);
+      }
+      if (keyword === "lusa") {
+        const dayAfterTomorrow = new Date(today);
+        dayAfterTomorrow.setDate(today.getDate() + 2);
+        return dayAfterTomorrow.toISOString().slice(0, 10);
+      }
+      return null;
+    };
+
     // Deteksi intent 
     if (ListCalendarMessages.some(keyword => input.toLowerCase().includes(keyword))) {
       const token = accessToken || localStorage.getItem('google_access_token');
@@ -86,25 +104,49 @@ export default function Page() {
       const eventTitle = titleMatch ? titleMatch[1].trim() : "Belajar bareng AI";
 
       // Parse date from user message
-      const dateMatch = input.match(/tanggal (\d{1,2}) (\w+)/i) || input.match(/(\d{1,2}) (\w+)/i);
-      let eventDate = "2025-09-05"; // default
+      const relativeDateMatch = input.match(/hari ini|besok|lusa/i);
+      const dateWithMonthNameMatch = input.match(/(?:tanggal|pada)?\s?(\d{1,2})\s(\w+)/i);
+      const numericDateMatch = input.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+      let eventDate : string;
+      let year = new Date().getFullYear().toString();
 
-      if (dateMatch) {
-        const day = dateMatch[1].padStart(2, '0');
-        const monthName = dateMatch[2].toLowerCase();
+      // Objek bulan dengan variasi singkatan
+      const monthMap: { [key: string]: string } = {
+        'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
+        'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
+        'september': '09', 'oktober': '10', 'november': '11', 'desember': '12',
+        'january': '01', 'february': '02', 'march': '03',
+        'may': '05', 'june': '06', 'july': '07', 'august': '08',
+         'october': '10', 'december': '12',
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+        'jun': '06', 'jul': '07', 'aug': '08',
+        'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+      };
+          
+      if (relativeDateMatch) {
+        const relativeDate = getRelativeDate(relativeDateMatch[0].toLowerCase());
+        eventDate = relativeDate !== null ? relativeDate : new Date().toISOString().slice(0, 10);
+      } else if (dateWithMonthNameMatch) {
+        const day = dateWithMonthNameMatch[1].padStart(2, '0');
+        const monthName = dateWithMonthNameMatch[2].toLowerCase();
+        const month = monthMap[monthName];
 
-        const monthMap: { [key: string]: string } = {
-          'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
-          'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
-          'september': '09', 'oktober': '10', 'november': '11', 'desember': '12',
-          'january': '01', 'february': '02', 'march': '03',
-          'may': '05', 'june': '06', 'july': '07', 'august': '08',
-          'october': '10', 'december': '12'
-        };
-
-        if (monthMap[monthName]) {
-          eventDate = `2025-${monthMap[monthName]}-${day}`;
+        if (month) {
+          eventDate = `${year}-${month}-${day}`;
+        } else {
+          eventDate = new Date().toISOString().slice(0, 10); // Fallback jika nama bulan tidak valid
         }
+      } else if (numericDateMatch) {
+        const day = numericDateMatch[1].padStart(2, '0');
+        const month = numericDateMatch[2].padStart(2, '0');
+        
+        if (numericDateMatch[3]) {
+          year = numericDateMatch[3].length === 2 ? `20${numericDateMatch[3]}` : numericDateMatch[3];
+        }
+        eventDate = `${year}-${month}-${day}`;
+      } else {
+        // Default fallback jika tidak ada format yang cocok
+        eventDate = new Date().toISOString().slice(0, 10);
       }
 
       // Parse time range from user message - handle both formats: "08.00 - 10.00" and "8 - 10"
