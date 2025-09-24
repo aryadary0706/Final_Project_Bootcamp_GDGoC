@@ -1,6 +1,6 @@
 // app/api/chat/gemini/route.ts
 import { NextResponse } from "next/server";
-import { db } from "@/src/lib/db"; // Sesuaikan dengan lokasi file db Anda
+import { db } from "@/src/lib/db";
 
 export const maxDuration = 30;
 

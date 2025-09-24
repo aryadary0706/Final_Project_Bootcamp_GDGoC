@@ -9,6 +9,8 @@ import remarkGfm from "remark-gfm";
 import { useGoogleCalendarToken } from "@/src/lib/useGoogleCalendarToken";
 import { createCalendarEvent } from "@/src/lib/createCalendarEvent";
 import CalendarConnectButton from "@/src/components/app-components/CalendarConnectButton";
+import SidebarChat from "@/src/components/app-components/SidebarChat";
+
 
 
 export default function Page() {
@@ -216,42 +218,17 @@ export default function Page() {
   };
 
   return (
-    <div className="flex w-full h-screen">
-      {/* Sidebar - Daftar Chat */}
-      <div className="w-64 border-r bg-gray-50 flex flex-col">
-        <div className="p-3 border-b">
-          <button
-            onClick={handleNewChat}
-            className="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-          >
-            + Chat Baru
-          </button>
-        </div>
-
-        <ScrollArea.Root className="flex-1">
-          <ScrollArea.Viewport className="h-full w-full p-2">
-            {chats.map((chat) => (
-              <div
-                key={chat.id}
-                onClick={() => handleSelectChat(chat.id)}
-                className={`p-3 mb-2 rounded-lg cursor-pointer text-sm hover:bg-gray-100 ${
-                  currentChatId === chat.id ? 'bg-gray-200' : ''
-                }`}
-              >
-                <div className="font-medium truncate">{chat.title}</div>
-                {chat.last_message && (
-                  <div className="text-gray-500 text-xs mt-1 truncate">
-                    {chat.last_message}
-                  </div>
-                )}
-              </div>
-            ))}
-          </ScrollArea.Viewport>
-        </ScrollArea.Root>
-      </div>
+    <div className="flex w-full h-screen bg-gray-100">
+      {/* Sidebar */}
+      <SidebarChat
+        chats={chats}
+        currentChatId={currentChatId}
+        handleSelectChat={handleSelectChat}
+        handleNewChat={handleNewChat}
+      />
 
       {/* Area Chat */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-white m-3 rounded-xl shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b">
     <div className="flex items-center gap-2">
