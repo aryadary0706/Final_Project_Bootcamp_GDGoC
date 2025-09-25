@@ -1,17 +1,43 @@
-// utils/youtube.ts
-export async function searchYouTube(query: string) {
-  const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(query)}&key=${apiKey}`;
+// src/lib/youtube.ts
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error("Failed to fetch from YouTube API");
+export async function searchYouTube(query: string) {
+  const apiKey = process.env.YOUTUBE_API_KEY; // ✅ Gunakan env server, BUKAN NEXT_PUBLIC_
+
+  // Jika tidak ada API key, kembalikan array kosong (jangan throw error yang crash backend)
+  if (!apiKey) {
+    console.error("YOUTUBE_API_KEY tidak ditemukan di environment variables");
+    return [];
   }
 
-  const data = await res.json();
-  return data.items.map((item: any) => ({
-    videoId: item.id.videoId,
-    title: item.snippet.title,
-    thumbnail: item.snippet.thumbnails.medium.url,
-  }));
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
+        query
+      )}&key=${apiKey}&type=video&maxResults=2`
+    );
+
+    if (!res.ok) {
+      console.error("YouTube API error:", res.status, await res.text());
+      return [];
+    }
+
+    const data = await res.json();
+
+    // Pastikan data.items ada dan berupa array
+    if (!Array.isArray(data?.items)) {
+      return [];
+    }
+
+    // Filter hanya item yang memiliki videoId yang valid
+    return data.items
+      .filter((item: any) => item.id?.videoId)
+      .map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet?.title || "Tanpa Judul",
+        url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+      }));
+  } catch (error) {
+    console.error("Error saat mencari video YouTube:", error);
+    return [];
+  }
 }
