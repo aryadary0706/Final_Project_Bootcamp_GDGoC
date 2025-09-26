@@ -4,12 +4,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import { z } from "zod";
 import { searchYouTube } from "@/src/lib/youtube";
+import { createCalendarEvent, type EventInput } from "@/src/lib/createCalendarEvent";
+import { start } from "repl";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const { message, chatId, educationLevel } = await req.json();
+    const { message, chatId, educationLevel, googleAccessToken } = await req.json();
 
     if (!chatId) {
       return NextResponse.json({ error: "chatId diperlukan" }, { status: 400 });
@@ -48,8 +50,9 @@ export async function POST(req: Request) {
     Contoh respons yang baik:
     "HTML adalah bahasa markup dasar untuk membuat halaman web. Berikut video tutorial yang bisa kamu tonton:"
     `;
+
+
     const model =  google("gemini-2.5-flash");
-    console.log("Model ID yang akan digunakan di SDK:", model);
     // Panggil model dengan tool yang relevan jika diperlukan
     const result = await generateText({
       model: model,
@@ -65,6 +68,23 @@ export async function POST(req: Request) {
                 return await searchYouTube(query?.trim() || message);
               },
             },
+            createCalendarEvent: {
+              description: "Buat acara baru di kalender pengguna",
+              inputSchema: z.object({
+                title: z.string(),
+                description: z.string().optional(),
+                start: z.string(),
+                end: z.string(),
+                timezone: z.string().optional(),
+              }),
+              execute: async (input: EventInput) => {
+                const accessToken = googleAccessToken
+                if (!accessToken){
+                  throw new Error("User not authenticated for calendar access");
+                }
+                return await createCalendarEvent(accessToken, input);
+              }
+            }
           },
     });
 
@@ -74,7 +94,7 @@ export async function POST(req: Request) {
     // Proses hasil dari tool jika tool dipanggil
     if (result.toolResults && result.toolResults.length > 0) {
       const youtubeToolResult = result.toolResults.find(
-        (tr) => tr.toolName === "searchYouTube"
+        (tr:any) => tr.toolName === "searchYouTube"
       );
       if (youtubeToolResult && youtubeToolResult.output) {
         videos = youtubeToolResult.output;
@@ -82,6 +102,17 @@ export async function POST(req: Request) {
           .map((v: any) => `Judul: \n${v.title}\nLink:\n ${v.url}`)
           .join("\n\n");
         replyText += `\n\nIni video yang mungkin bisa membantumu:\n\n${videoTexts}`;
+      }
+      const calendarToolResult = result.toolResults.find(
+        (tr:any) => tr.toolName === "createCalendarEvent"
+      );
+      if (calendarToolResult?.output){
+        const event = calendarToolResult.output;
+        replyText += `\n\n✅ Acara berhasil dibuat di kalender:\n- Judul: ${event.title || "Tidak ada judul"}\n- Waktu: ${event.start} – ${event.end}`;
+
+        if (event.htmlLink){
+          replyText += `\n Bisa lihat jadwa; yang ditambahkan di ${event.htmlLink}`;
+        }
       }
     }
 
