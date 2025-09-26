@@ -33,7 +33,7 @@ interface ChatState {
   createNewChat: (title?: string) => Promise<number | null>;
   loadMessages: (chatId: number) => Promise<void>;
   loadChats: () => Promise<void>;
-  sendMessage: (message: string, chatId: number, educationLevel: string) => Promise<void>;
+  sendMessage: (message: string, chatId: number, educationLevel: string, googleAccessToken?: string | null ) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -111,7 +111,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (message: string, chatId: number, educationLevel: string) => {
+  sendMessage: async (message: string, chatId: number, educationLevel: string, googleAccessToken?: string | null) => {
     // Tambahkan pesan user ke UI secara optimistic
     get().addMessage('user', message);
     
@@ -119,7 +119,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const res = await fetch('/api/chat/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, chatId, educationLevel }),
+        body: JSON.stringify({ message, chatId, educationLevel, googleAccessToken }),
       });
 
       const data = await res.json();

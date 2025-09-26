@@ -4,12 +4,19 @@ import { NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import { z } from "zod";
 import { searchYouTube } from "@/src/lib/youtube";
+import { createCalendarEvent, type EventInput } from "@/src/lib/createCalendarEvent";
 
 export const maxDuration = 30;
 
+type ToolResult = {
+  toolName: string;
+  input: Record<string, unknown>;
+  output: unknown;
+};
+
 export async function POST(req: Request) {
   try {
-    const { message, chatId, educationLevel } = await req.json();
+    const { message, chatId, educationLevel, googleAccessToken } = await req.json();
 
     if (!chatId) {
       return NextResponse.json({ error: "chatId diperlukan" }, { status: 400 });
@@ -51,31 +58,49 @@ export async function POST(req: Request) {
 
     // Panggil model dengan tool yang relevan jika diperlukan
     const result = await generateText({
-      model: google(process.env.GEMINI_MODEL || "models/gemini-1.5-flash"),
+      model: google(process.env.GEMINI_MODEL || "gemini-1.5-flash"),
       system: systemPrompt,
       messages,
-      tools: asksForVideo
-        ? {
-            searchYouTube: {
-              description: "Cari video YouTube yang relevan berdasarkan query",
-              inputSchema: z.object({
-                query: z.string().describe("Kata kunci pencarian YouTube"),
-              }),
-              execute: async ({ query }: { query: string }) => {
-                return await searchYouTube(query?.trim() || message);
-              },
+      tools: {
+        ...(asksForVideo && {
+          searchYouTube: {
+            description: "Cari video YouTube yang relevan berdasarkan query",
+            inputSchema: z.object({
+              query: z.string().describe("Kata kunci pencarian YouTube"),
+            }),
+            execute: async ({ query }: { query: string }) => {
+              return await searchYouTube(query?.trim() || message);
             },
-          }
-        : undefined,
+          },
+        }),
+        createCalendarEvent: {
+          description: "Buat acara baru di kalender pengguna",
+          inputSchema: z.object({
+            title: z.string(),
+            description: z.string().optional(),
+            start: z.string(),
+            end: z.string(),
+            timezone: z.string().optional(),
+          }),
+          execute: async (input: EventInput) => { 
+            const accessToken = googleAccessToken
+            if (!accessToken) {
+              throw new Error("User not authenticated for calendar access");
+            }
+            return await createCalendarEvent(accessToken, input);
+          },
+        },
+      },
     });
 
     let replyText = result.text;
     let videos: any[] = [];
-
-    // Proses hasil dari tool jika tool dipanggil
+    
+    // Output AI Jika menggunakan tools SearchYoutube
     if (result.toolResults && result.toolResults.length > 0) {
+      // const toolResults = result.toolResults as ToolResult[] | undefined;
       const youtubeToolResult = result.toolResults.find(
-        (tr) => tr.toolName === "searchYouTube"
+        (tr:any) => tr.toolName === "searchYouTube"
       );
       if (youtubeToolResult && youtubeToolResult.output) {
         videos = youtubeToolResult.output;
@@ -83,6 +108,21 @@ export async function POST(req: Request) {
           .map((v: any) => `Judul: \n${v.title}\nLink:\n ${v.url}`)
           .join("\n\n");
         replyText += `\n\nIni video yang mungkin bisa membantumu:\n\n${videoTexts}`;
+      }
+
+      // // Output AI Jika menggunakan tools createCalendarEvent
+      const calendarToolResult = result.toolResults.find(
+        (tr:any) => tr.toolName === "createCalendarEvent"
+      );
+      if (calendarToolResult?.output) {
+        // Asumsikan output berisi informasi event yang berhasil dibuat
+        const event = calendarToolResult.output;
+        replyText += `\n\n✅ Acara berhasil dibuat di kalender:\n- Judul: ${event.title || "Tidak ada judul"}\n- Waktu: ${event.start} – ${event.end}`;
+        
+        // Opsional: tambahkan link ke Google Calendar jika tersedia
+        if (event.htmlLink) {
+          replyText += `\n- Lihat di: ${event.htmlLink}`;
+        }
       }
     }
 
