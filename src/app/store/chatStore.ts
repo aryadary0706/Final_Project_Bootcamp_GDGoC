@@ -111,7 +111,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (message: string, chatId: number, educationLevel: string, googleAccessToken?: string | null) => {
+  sendMessage: async (message: string, chatId: number, educationLevel: string) => {
     // Tambahkan pesan user ke UI secara optimistic
     get().addMessage('user', message);
     
@@ -119,7 +119,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const res = await fetch('/api/chat/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, chatId, educationLevel, googleAccessToken }),
+        body: JSON.stringify({ message, chatId, educationLevel }),
       });
 
       const data = await res.json();

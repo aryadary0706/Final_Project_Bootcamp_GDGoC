@@ -4,19 +4,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import { z } from "zod";
 import { searchYouTube } from "@/src/lib/youtube";
-import { createCalendarEvent, type EventInput } from "@/src/lib/createCalendarEvent";
 
 export const maxDuration = 30;
 
-type ToolResult = {
-  toolName: string;
-  input: Record<string, unknown>;
-  output: unknown;
-};
-
 export async function POST(req: Request) {
   try {
-    const { message, chatId, educationLevel, googleAccessToken } = await req.json();
+    const { message, chatId, educationLevel } = await req.json();
 
     if (!chatId) {
       return NextResponse.json({ error: "chatId diperlukan" }, { status: 400 });
@@ -39,12 +32,15 @@ export async function POST(req: Request) {
       content: m.content,
     }));
 
+    // Deteksi apakah user meminta video
+    const asksForVideo = /video|youtube|tonton|lihat|tunjukkan|ada.*video|rekomendasi.*video/i.test(message);
+
     // System prompt untuk AI
     const systemPrompt = `Kamu adalah tutor AI untuk siswa tingkat ${educationLevel}. Kamu membantu para siswa untuk belajar.
 
     # RULE:
-    - Jika pengguna meminta video/YouTube, KAMU HARUS:
-      1. Memberikan penjelasan singkat (1-2 kalimat) tentang topik tersebut.
+    - Jika pengguna meminta salah satu pada kata di ${asksForVideo}, KAMU HARUS:
+      1. Memberikan penjelasan detail mengenai  topik tersebut.
       2. MENGGUNAKAN tool searchYouTube untuk mencari video.
       3. KAMU HARUS MEMANGGIL FUNGSI searchYouTube — jangan pernah memberikan link manual.
     - Gunakan bahasa yang sesuai untuk usia ${educationLevel}.
@@ -52,55 +48,33 @@ export async function POST(req: Request) {
     Contoh respons yang baik:
     "HTML adalah bahasa markup dasar untuk membuat halaman web. Berikut video tutorial yang bisa kamu tonton:"
     `;
-
-    // Deteksi apakah user meminta video
-    const asksForVideo = /video|youtube|tonton|lihat|tunjukkan|ada.*video|rekomendasi.*video/i.test(message);
-
+    const model =  google("gemini-2.5-flash");
+    console.log("Model ID yang akan digunakan di SDK:", model);
     // Panggil model dengan tool yang relevan jika diperlukan
     const result = await generateText({
-      model: google(process.env.GEMINI_MODEL || "gemini-1.5-flash"),
+      model: model,
       system: systemPrompt,
       messages,
-      tools: {
-        ...(asksForVideo && {
-          searchYouTube: {
-            description: "Cari video YouTube yang relevan berdasarkan query",
-            inputSchema: z.object({
-              query: z.string().describe("Kata kunci pencarian YouTube"),
-            }),
-            execute: async ({ query }: { query: string }) => {
-              return await searchYouTube(query?.trim() || message);
+      tools:{
+            searchYouTube: {
+              description: "Cari video YouTube yang relevan berdasarkan query",
+              inputSchema: z.object({
+                query: z.string().describe("Kata kunci pencarian YouTube"),
+              }),
+              execute: async ({ query }: { query: string }) => {
+                return await searchYouTube(query?.trim() || message);
+              },
             },
           },
-        }),
-        createCalendarEvent: {
-          description: "Buat acara baru di kalender pengguna",
-          inputSchema: z.object({
-            title: z.string(),
-            description: z.string().optional(),
-            start: z.string(),
-            end: z.string(),
-            timezone: z.string().optional(),
-          }),
-          execute: async (input: EventInput) => { 
-            const accessToken = googleAccessToken
-            if (!accessToken) {
-              throw new Error("User not authenticated for calendar access");
-            }
-            return await createCalendarEvent(accessToken, input);
-          },
-        },
-      },
     });
 
     let replyText = result.text;
     let videos: any[] = [];
-    
-    // Output AI Jika menggunakan tools SearchYoutube
+
+    // Proses hasil dari tool jika tool dipanggil
     if (result.toolResults && result.toolResults.length > 0) {
-      // const toolResults = result.toolResults as ToolResult[] | undefined;
       const youtubeToolResult = result.toolResults.find(
-        (tr:any) => tr.toolName === "searchYouTube"
+        (tr) => tr.toolName === "searchYouTube"
       );
       if (youtubeToolResult && youtubeToolResult.output) {
         videos = youtubeToolResult.output;
@@ -108,21 +82,6 @@ export async function POST(req: Request) {
           .map((v: any) => `Judul: \n${v.title}\nLink:\n ${v.url}`)
           .join("\n\n");
         replyText += `\n\nIni video yang mungkin bisa membantumu:\n\n${videoTexts}`;
-      }
-
-      // // Output AI Jika menggunakan tools createCalendarEvent
-      const calendarToolResult = result.toolResults.find(
-        (tr:any) => tr.toolName === "createCalendarEvent"
-      );
-      if (calendarToolResult?.output) {
-        // Asumsikan output berisi informasi event yang berhasil dibuat
-        const event = calendarToolResult.output;
-        replyText += `\n\n✅ Acara berhasil dibuat di kalender:\n- Judul: ${event.title || "Tidak ada judul"}\n- Waktu: ${event.start} – ${event.end}`;
-        
-        // Opsional: tambahkan link ke Google Calendar jika tersedia
-        if (event.htmlLink) {
-          replyText += `\n- Lihat di: ${event.htmlLink}`;
-        }
       }
     }
 
