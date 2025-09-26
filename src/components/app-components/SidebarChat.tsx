@@ -17,6 +17,7 @@ export default function SidebarChat({
 }: SidebarChatProps) {
   return (
     <div className="w-64 h-screen border-r bg-gray-50 flex flex-col">
+
       {/* Tombol Chat Baru */}
       <div className="p-3 border-b">
         <button
@@ -58,16 +59,6 @@ export default function SidebarChat({
             <ScrollArea.Thumb className="flex-1 bg-gray-400 rounded-full" />
           </ScrollArea.Scrollbar>
         </ScrollArea.Root>
-      </div>
-
-      {/* Tombol Upload & Delete Dokumen - FIXED di bawah dengan flex-shrink-0 */}
-      <div className="flex-shrink-0 p-3 border-t space-y-2">
-        <button className="w-full px-3 py-2 bg-gray-200 rounded hover:bg-gray-300 text-sm flex items-center justify-center gap-2">
-          📂 Upload Document
-        </button>
-        <button className="w-full px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm flex items-center justify-center gap-2">
-          🗑 Delete Document
-        </button>
       </div>
     </div>
   );

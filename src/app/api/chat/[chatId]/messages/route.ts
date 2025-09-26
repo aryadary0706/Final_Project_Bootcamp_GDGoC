@@ -4,12 +4,13 @@ import { db } from "@/src/lib/db"; // Sesuaikan path dengan lokasi file db Anda
 
 export async function GET(
   req: Request,
-  context: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const chatId = parseInt((await context).params.chatId);
+    const { chatId } = await params;
+    const chatIdNum = parseInt(chatId);
 
-    if (isNaN(chatId)) {
+    if (isNaN(chatIdNum)) {
       return NextResponse.json(
         { error: "Chat ID tidak valid" },
         { status: 400 }
@@ -22,7 +23,7 @@ export async function GET(
        FROM message 
        WHERE chat_id = ? 
        ORDER BY created_at ASC`,
-      [chatId]
+      [chatIdNum]
     ) as any;
 
     return NextResponse.json({ messages });
