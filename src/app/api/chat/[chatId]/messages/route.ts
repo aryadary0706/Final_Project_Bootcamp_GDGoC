@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const { chatId } = await context.params;
+    const { chatId } = await params;
     const parsedChatId = parseInt(chatId, 10);
 
     if (isNaN(parsedChatId)) {
@@ -23,7 +23,7 @@ export async function GET(
        FROM message 
        WHERE chat_id = ? 
        ORDER BY created_at ASC`,
-      [chatIdNum]
+      [chatId]
     ) as any;
 
     return NextResponse.json({ messages });

@@ -108,7 +108,7 @@ export default function Page() {
       return;
     }
     console.log("🚀 Mengirim pesan dengan accessToken:", accessToken);
-
+    let finalMessage =  input
     // Include uploaded files in the message
     if (uploadedFiles.length > 0) {
       const fileList = uploadedFiles.map(file => `- ${file.name}`).join('\n');
@@ -116,7 +116,7 @@ export default function Page() {
     }
 
     // 2️⃣ Tetap kirim ke AI
-    await sendMessage(input, chatId, educationLevel, accessToken);
+    await sendMessage(finalMessage, chatId, educationLevel, accessToken);
     setUploadedFiles([]);
     setInput("");
   };

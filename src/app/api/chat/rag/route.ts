@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const prompt = `Gunakan informasi berikut untuk menjawab pertanyaan.\n\nKonteks:\n${context}\n\nPertanyaan: ${query}`;
 
     // 3. Kirim ke Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
 
     return NextResponse.json({
