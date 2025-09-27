@@ -2,9 +2,11 @@
 import { useEffect } from "react";
 import { useGoogleCalendarToken } from "@/src/lib/useGoogleCalendarToken";
 import { createCalendarEvent } from "@/src/lib/createCalendarEvent";
+import { useCalendarStore } from "@/src/app/store/calendarStore";
 
 export default function CalendarConnectButton() {
-  const { accessToken, connect, error, isLoading } = useGoogleCalendarToken();
+  const { connect, error, isLoading } = useGoogleCalendarToken();
+  const { accessToken } = useCalendarStore();
 
   // Debug accessToken in button component
   useEffect(() => {
@@ -36,8 +38,9 @@ export default function CalendarConnectButton() {
     }
 
     try {
+      console.log( `Access Token = ${accessToken}`)
       const res = await createCalendarEvent(accessToken, {
-        title: "Test Event - StudyBuddy Integration",
+        summary: "Test Event - StudyBuddy Integration",
         description: "Testing Google Calendar integration with StudyBuddy",
         start: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
         end: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now

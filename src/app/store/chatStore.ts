@@ -111,10 +111,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (message: string, chatId: number, educationLevel: string, googleAccessToken?: string | null) => {
+  sendMessage: async (
+    message: string, 
+    chatId: number, 
+    educationLevel: string,
+    googleAccessToken: string | null = localStorage.getItem("google_access_token")
+  ) => {
     // Tambahkan pesan user ke UI secara optimistic
     get().addMessage('user', message);
-    
+    console.log("Sending to /api/chat/gemini:", { googleAccessToken });
     try {
       const res = await fetch('/api/chat/gemini', {
         method: 'POST',

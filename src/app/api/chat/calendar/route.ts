@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { access_token, title, description, start, end, timezone } = body;
+    const { access_token, summary, description, start, end, timezone } = body;
 
     if (!access_token) {
       return NextResponse.json({ success: false, error: "Missing access_token" }, { status: 400 });
@@ -20,14 +20,14 @@ export async function POST(req: Request) {
     const calendar = google.calendar({ version: "v3", auth });
 
     const event = {
-      summary: title || "Belajar Bareng AI 🤖",
+      summary: summary || "Belajar Bareng AI 🤖",
       description: description || "Event dari StudyBuddy Chatbot",
       start: {
-        dateTime: start,               // contoh: "2025-09-04T10:00:00+07:00"
+        dateTime: start,
         timeZone: timezone || "Asia/Jakarta",
       },
       end: {
-        dateTime: end,                 // contoh: "2025-09-04T11:00:00+07:00"
+        dateTime: end,
         timeZone: timezone || "Asia/Jakarta",
       },
     };
