@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# `Study Buddy Chatbot AI`
 
-## Getting Started
+## Description
+Chatbot edukatif yang dirancang untuk membantu pelajar memahami materi dengan interaktif, adaptif, dan menyenangkan.
+Berfokus untuk mendukung Quality Education (SDG #4) melalui pembelajaran berbasis dialog, refleksi, dan personalisasi.
 
-First, run the development server:
+**Note for developers : fork the repo first before edit or commit.**
 
+## 🧑‍💻 Team
+
+|          **Name**          |      **Role**       |
+|----------------------------|---------------------|
+| Muhammad Alvin Ababil      | Project Manager     |
+| Kemas M Aryadary Rasyad    | Front End Technical |
+| Karina Azzahra             | Front End UI/UX     |
+| M Rafli Adhan S            | Back End            |
+
+## 🚀 Features
+- **🤖 AI Powered Chatbot**                   : Bisa menjawab pertanyaan, menjelaskan materi dan memberi latihan soal. Didukung oleh model AI yang adaptif terhadap gaya belajar penguna.
+- **📚 Chat History Tracking**                : Menyimpan riwayat percakapan agar pengguna bisa meninjau kembali materi yang dibahas.
+- **🎓 Education Level Selector**             : Bisa menyesuaikan gaya bahasa dan kedalaman materi terhadap tingkat edukasi pengguna.
+- **📊 Adaptive Learning Flow**               : Sistem pembelajaran menyesuaikan performa dan respons pengguna.
+- **📆 Scheduling**                           : Bisa menjadwalkan event pada google calendar
+- **🌐 Decentralized Frontend Architecture**  : Frontend bersifat modular dan scalable sehingga bisa mengembangkan fitur tanpa mengaggu sistem utama.
+- **📓 Retrieval Augmented Generation**       : Bisa menjelaskan isi dari dokumen yang diinputkan pengguna dan menjawab pertanyaan pengguna berdasarkan dokumen yang diberikan.
+- **📽️ Generate Youtube Video Links**         : Bisa generate link video youtube untuk membantu pengguna menggunakan video pembelajaran.
+
+
+## 🛠 Tech Stack
+
+**Frontend:**
+- NextJS
+- Tailwind CSS
+- ShadCN
+- Zustand
+
+**Backend:**
+- AI SDK (Gemini 2.5 Flash)
+- MySQL Database example XAMPP
+- NodeJS
+
+## 🚀 How to Run the Project
+
+### Step 1. Clone the Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+https://github.com/NeoRyumasil/Team4-StudyBuddyChatbotAI-AIXSoftDevBootcamp.git
+cd Team4-StudyBuddyChatbotAI-AIXSoftDevBootcamp/studybuddy
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Step 2. Install Depedencies
+```bash
+pnpm add ai @ai-sdk/react @ai-sdk/google
+npx shadcn@latest add
+pnpm add react-markdown remark-gfm
+pnpm install zustand 
+pnpm install @google/generative-ai
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Step 3 Setup Environtment
+- Make .env.local file
+- Add this code on .env.local
+  ```bash
+  GOOGLE_GENERATIVE_AI_API_KEY = Insert your API Key
+  GEMINI_MODEL = Insert your gemini model here
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+  GOOGLE_CLIENT_ID = Insert your google client id
+  GOOGLE_CLIENT_SECRET = Insert yout google client secret
+  NEXTAUTH_SECRET = Insert String
+  NEXTAUTH_URL = http://localhost:3000
 
-## Learn More
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID = Insert your public google client id
+  YOUTUBE_API_KEY = Insert your youtube API key
 
-To learn more about Next.js, take a look at the following resources:
+  GOOGLE_REDIRECT_URL = http://localhost:3000/api/auth/callback
+  
+  DB_HOST=localhost
+  DB_USER=root
+  DB_PASSWORD=''
+  DB_NAME=chatai
+  ```
+  
+### Step 4 Make Database
+- Activate mySQL database
+- Make database name 'chatai'
+- insert SQL code on this repo to the database
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Step 5 Run the Project
+```bash
+  npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Step 6 
+- Ctrl + Click localhost link on the terminal to access the AI.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📋 Requirements (optional)
+- Node.js versi 18 or newer
+- MySQL Database example (XAMPP)
+- Google API
