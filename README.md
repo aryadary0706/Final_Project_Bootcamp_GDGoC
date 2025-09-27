@@ -43,8 +43,8 @@ Berfokus untuk mendukung Quality Education (SDG #4) melalui pembelajaran berbasi
 
 ### Step 1. Clone the Repository
 ```bash
-https://github.com/NeoRyumasil/Team4-StudyBuddyChatbotAI-AIXSoftDevBootcamp.git
-cd Team4-StudyBuddyChatbotAI-AIXSoftDevBootcamp/studybuddy
+https://github.com/aryadary0706/Final_Project_Bootcamp_GDGoC.git
+cd Final_Project_Bootcamp_GDGoC
 ```
 
 ### Step 2. Install Depedencies
