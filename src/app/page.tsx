@@ -6,7 +6,7 @@ import * as ScrollArea from "@radix-ui/react-scroll-area";
 import * as Separator from "@radix-ui/react-separator";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Paperclip, X } from "lucide-react";
+
 import { useGoogleCalendarToken } from "@/src/lib/useGoogleCalendarToken";
 import { createCalendarEvent } from "@/src/lib/createCalendarEvent";
 import CalendarConnectButton from "@/src/components/app-components/CalendarConnectButton";
@@ -30,7 +30,6 @@ export default function Page() {
   } = useChatStore();
   const { accessToken } = useGoogleCalendarToken();
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load chats saat komponen pertama kali dimuat
   useEffect(() => {
@@ -255,23 +254,20 @@ export default function Page() {
     await sendMessage(messageWithEducation, currentChatId);
   };
 
+  const handleUploadFile = (file: File) => {
+    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+    handleFileSelect(event);
+  };
+
   return (
     <div className="flex w-full h-screen bg-gray-100">
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.doc,.docx,.txt,.md"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-
       {/* Sidebar */}
       <SidebarChat
         chats={chats}
         currentChatId={currentChatId}
         handleSelectChat={handleSelectChat}
         handleNewChat={handleNewChat}
+        handleUploadFile={handleUploadFile}
       />
 
       {/* Area Chat */}
@@ -383,7 +379,7 @@ export default function Page() {
                     className="text-gray-400 hover:text-gray-600"
                     title="Remove file"
                   >
-                    <X size={16} />
+                    ×
                   </button>
                 </div>
               ))}
@@ -399,17 +395,6 @@ export default function Page() {
           }}
           className="p-3 flex gap-2 border-t bg-white"
         >
-          {/* Upload Document - Paperclip Icon (leftmost, like GPT) */}
-          <button
-            type="button"
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={!currentChatId}
-            title="Upload Document"
-          >
-            <Paperclip size={20} className="text-gray-500" />
-          </button>
-
           <input
             className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-400"
             value={input}
@@ -419,7 +404,7 @@ export default function Page() {
           />
           <button
             type="submit"
-            disabled={!input.trim() || !currentChatId}
+            disabled={!input.trim() && uploadedFiles.length === 0 || !currentChatId}
             className="px-4 py-2 rounded-lg border bg-blue-500 hover:bg-blue-600 text-white text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             Kirim

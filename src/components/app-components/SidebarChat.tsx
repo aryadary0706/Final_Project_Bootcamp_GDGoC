@@ -1,12 +1,14 @@
 "use client";
 
 import * as ScrollArea from "@radix-ui/react-scroll-area";
+import { Button } from "../ui/button";
 
 interface SidebarChatProps {
   chats: { id: number; title: string; last_message?: string }[];
   currentChatId: number | null;
   handleSelectChat: (chatId: number) => void;
   handleNewChat: () => void;
+  handleUploadFile: (file: File) => void;
 }
 
 export default function SidebarChat({
@@ -14,7 +16,14 @@ export default function SidebarChat({
   currentChatId,
   handleSelectChat,
   handleNewChat,
+  handleUploadFile,
 }: SidebarChatProps) {
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (handleUploadFile && e.target.files?.[0]) {
+      handleUploadFile(e.target.files[0]);
+    }
+  };
+
   return (
     <div className="w-64 h-screen border-r bg-gray-50 flex flex-col">
 
@@ -59,6 +68,23 @@ export default function SidebarChat({
             <ScrollArea.Thumb className="flex-1 bg-gray-400 rounded-full" />
           </ScrollArea.Scrollbar>
         </ScrollArea.Root>
+      </div>
+
+      {/* Upload Button at the bottom */}
+      <div className="p-3 border-t">
+        <Button
+          onClick={() => document.getElementById('file-upload')?.click()}
+          variant="secondary"
+          className="w-full"
+        >
+          Upload Document
+        </Button>
+        <input
+          id="file-upload"
+          type="file"
+          onChange={handleFileInputChange}
+          className="hidden"
+        />
       </div>
     </div>
   );
