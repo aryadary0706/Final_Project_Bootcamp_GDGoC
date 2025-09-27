@@ -1,23 +1,40 @@
 // src/lib/createCalendarEvent.ts
-
 export type EventInput = {
-  title: string;
+  summary: string;
   description?: string;
-  start: string; // ISO format, contoh: "2025-09-05T10:00:00+07:00"
-  end: string;   // ISO format
+  start: string;
+  end: string;
   timezone?: string;
 };
 
 export async function createCalendarEvent(accessToken: string, event: EventInput) {
-  const res = await fetch("/api/chat/calendar", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ access_token: accessToken, ...event }),
-  });
+  try {
+    const siteUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const Url = `${siteUrl}/api/chat/calendar`;
 
-  if (!res.ok) {
-    throw new Error("Failed to create calendar event");
+    const res = await fetch(Url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: accessToken, ...event }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.message || "Failed to create calendar event",
+      };
+    }
+
+    return {
+      success: true,
+      data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: (error as Error).message || "Network error",
+    };
   }
-
-  return res.json();
 }

@@ -8,14 +8,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Paperclip, X } from "lucide-react";
 import { useGoogleCalendarToken } from "@/src/lib/useGoogleCalendarToken";
-import { createCalendarEvent } from "@/src/lib/createCalendarEvent";
 import CalendarConnectButton from "@/src/components/app-components/CalendarConnectButton";
+
+import { useCalendarStore } from "./store/calendarStore";
 import SidebarChat from "@/src/components/app-components/SidebarChat";
 
 export default function Page() {
   const [input, setInput] = useState("");
-  const [educationLevel, setEducationLevel] = useState("SD");
+  const [educationLevel, setEducationLevel] = useState("Kuliah");
   const [uploadedFiles, setUploadedFiles] = useState<Array<{name: string, size: number}>>([]);
+
 
   const {
     messages,
@@ -28,7 +30,7 @@ export default function Page() {
     sendMessage,
     setCurrentChatId
   } = useChatStore();
-  const { accessToken } = useGoogleCalendarToken();
+  const { accessToken } = useCalendarStore();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,11 +46,18 @@ export default function Page() {
     }
   }, [messages]);
 
+  useEffect(() => {
+  console.log("🔄 accessToken di Page berubah menjadi:", accessToken);
+}, [accessToken]);
+
   // Debug accessToken changes
   useEffect(() => {
     console.log("Access token in page.tsx:", accessToken);
     console.log("Access token from localStorage:", localStorage.getItem('google_access_token'));
   }, [accessToken]);
+
+
+  const isCalendarRequest = (text: string) => /jadwal|schedule|calendar|buat.*acara|rencana/i.test(text);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -81,6 +90,7 @@ export default function Page() {
     setUploadedFiles(prev => prev.filter(file => file.name !== fileName));
   };
 
+
   const handleSendMessage = async () => {
     if (!input.trim() && uploadedFiles.length === 0) return;
     setInput("")
@@ -92,9 +102,12 @@ export default function Page() {
       return;
     }
 
-    // Tambahkan prefix level pendidikan ke pesan
-    //const educationPrefix = educationLevel ? `[Halo, aku di tingkat: ${educationLevel}]\n` : '';
-    //let finalMessage = educationPrefix + input;
+    // Jika butuh kalender, pastikan token ada
+    if (isCalendarRequest(input) && !accessToken) {
+      alert("⚠️ Silakan hubungkan Google Calendar terlebih dahulu sebelum membuat jadwal.");
+      return;
+    }
+    console.log("🚀 Mengirim pesan dengan accessToken:", accessToken);
 
     // Include uploaded files in the message
     if (uploadedFiles.length > 0) {
@@ -102,128 +115,8 @@ export default function Page() {
       finalMessage += `\n\n[Files uploaded for reference:\n${fileList}]`;
     }
 
-    // List keyword untuk trigger calendar
-    const ListCalendarMessages = [
-      "buat jadwal",
-      "jadwalkan",
-      "kalendar",
-      "meeting",
-      "jadwal",
-      "schedule",
-    ]
-
-    // const getRelativeDate = (keyword: string) => {
-    //   const today = new Date();
-    //   if (keyword === "hari ini") {
-    //     return today.toISOString().slice(0, 10);
-    //   }
-    //   if (keyword === "besok") {
-    //     const tomorrow = new Date(today);
-    //     tomorrow.setDate(today.getDate() + 1);
-    //     return tomorrow.toISOString().slice(0, 10);
-    //   }
-    //   if (keyword === "lusa") {
-    //     const dayAfterTomorrow = new Date(today);
-    //     dayAfterTomorrow.setDate(today.getDate() + 2);
-    //     return dayAfterTomorrow.toISOString().slice(0, 10);
-    //   }
-    //   return null;
-    // };
-
-    // Deteksi intent 
-    // if (ListCalendarMessages.some(keyword => input.toLowerCase().includes(keyword))) {
-    //   const token = accessToken || localStorage.getItem('google_access_token');
-    //   if (!token) {
-    //     alert("❌ Silakan connect ke Google Calendar terlebih dahulu dengan klik tombol 'Connect Google Calendar'");
-    //     return;
-    //   }
-
-    //   // Parse title from user message - extract what's between "jadwal" and "pada"
-    //   const titleMatch = input.match(/jadwal (.+?) pada/i);
-    //   const eventTitle = titleMatch ? titleMatch[1].trim() : "Belajar bareng AI";
-
-    //   // Parse date from user message
-    //   const relativeDateMatch = input.match(/hari ini|besok|lusa/i);
-    //   const dateWithMonthNameMatch = input.match(/(?:tanggal|pada)?\s?(\d{1,2})\s(\w+)/i);
-    //   const numericDateMatch = input.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
-    //   let eventDate : string;
-    //   let year = new Date().getFullYear().toString();
-
-    //   // Objek bulan dengan variasi singkatan
-    //   const monthMap: { [key: string]: string } = {
-    //     'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
-    //     'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
-    //     'september': '09', 'oktober': '10', 'november': '11', 'desember': '12',
-    //     'january': '01', 'february': '02', 'march': '03',
-    //     'may': '05', 'june': '06', 'july': '07', 'august': '08',
-    //      'october': '10', 'december': '12',
-    //     'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
-    //     'jun': '06', 'jul': '07', 'aug': '08',
-    //     'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
-    //   };
-          
-    //   if (relativeDateMatch) {
-    //     const relativeDate = getRelativeDate(relativeDateMatch[0].toLowerCase());
-    //     eventDate = relativeDate !== null ? relativeDate : new Date().toISOString().slice(0, 10);
-    //   } else if (dateWithMonthNameMatch) {
-    //     const day = dateWithMonthNameMatch[1].padStart(2, '0');
-    //     const monthName = dateWithMonthNameMatch[2].toLowerCase();
-    //     const month = monthMap[monthName];
-
-    //     if (month) {
-    //       eventDate = `${year}-${month}-${day}`;
-    //     } else {
-    //       eventDate = new Date().toISOString().slice(0, 10); // Fallback jika nama bulan tidak valid
-    //     }
-    //   } else if (numericDateMatch) {
-    //     const day = numericDateMatch[1].padStart(2, '0');
-    //     const month = numericDateMatch[2].padStart(2, '0');
-        
-    //     if (numericDateMatch[3]) {
-    //       year = numericDateMatch[3].length === 2 ? `20${numericDateMatch[3]}` : numericDateMatch[3];
-    //     }
-    //     eventDate = `${year}-${month}-${day}`;
-    //   } else {
-    //     // Default fallback jika tidak ada format yang cocok
-    //     eventDate = new Date().toISOString().slice(0, 10);
-    //   }
-
-    //   // Parse time range from user message - handle both formats: "08.00 - 10.00" and "8 - 10"
-    //   const timeMatch = input.match(/pukul (\d{1,2})(?:\.(\d{1,2}))? ?- ?(\d{1,2})(?:\.(\d{1,2}))?/i);
-    //   let startTime = "10:00:00";
-    //   let endTime = "11:00:00";
-
-    //   if (timeMatch) {
-    //     const startHour = timeMatch[1].padStart(2, '0');
-    //     const startMinute = timeMatch[2] ? timeMatch[2].padStart(2, '0') : "00";
-    //     const endHour = timeMatch[3].padStart(2, '0');
-    //     const endMinute = timeMatch[4] ? timeMatch[4].padStart(2, '0') : "00";
-
-    //     startTime = `${startHour}:${startMinute}:00`;
-    //     endTime = `${endHour}:${endMinute}:00`;
-    //   }
-
-    //   try {
-    //     const res = await createCalendarEvent(token, {
-    //       title: eventTitle,
-    //       description: input,
-    //       start: `${eventDate}T${startTime}+07:00`,
-    //       end: `${eventDate}T${endTime}+07:00`,
-    //       timezone: "Asia/Jakarta",
-    //     });
-
-    //     if (res.success) {
-    //       alert(`✅ Jadwal berhasil ditambahkan ke Google Calendar untuk tanggal ${eventDate} pukul ${startTime} - ${endTime}!`);
-    //     } else {
-    //       alert("❌ Gagal menambahkan jadwal: " + res.error);
-    //     }
-    //   } catch (error) {
-    //     alert("❌ Terjadi kesalahan saat menambahkan jadwal: " + (error as Error).message);
-    //   }
-    // }
-
     // 2️⃣ Tetap kirim ke AI
-    await sendMessage(finalMessage, chatId);
+    await sendMessage(input, chatId, educationLevel, accessToken);
     setUploadedFiles([]);
     setInput("");
   };
@@ -240,19 +133,6 @@ export default function Page() {
       // Clear messages untuk chat baru
       useChatStore.setState({ messages: [] });
     }
-  };
-
-  const handleQuickMessage = async (message: string) => {
-    if (!currentChatId) {
-      alert('Pilih atau buat chat terlebih dahulu');
-      return;
-    }
-
-    // Tambahkan prefix level pendidikan ke pesan
-    const educationPrefix = educationLevel ? `[Halo, aku di tingkat: ${educationLevel}]\n` : '';
-    const messageWithEducation = educationPrefix + message;
-
-    await sendMessage(messageWithEducation, currentChatId, educationLevel);
   };
 
   return (

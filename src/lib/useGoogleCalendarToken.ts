@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useCalendarStore } from "../app/store/calendarStore";
 
 declare global {
   interface Window {
@@ -13,15 +14,23 @@ export function useGoogleCalendarToken() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const tokenClientRef = useRef<any>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const { setAccessToken: setGlobalToken } = useCalendarStore();
 
   // Load token + expiry dari localStorage
   useEffect(() => {
     const storedToken = localStorage.getItem("google_access_token");
     const storedExpiry = localStorage.getItem("google_token_expiry");
 
+    console.log("Reading from localStorage on mount:", {
+    token: storedToken,
+    expiry: storedExpiry
+    });
+
     if (storedToken) {
       console.log("Loaded access token from localStorage:", storedToken);
       setAccessToken(storedToken);
+      setGlobalToken(storedToken);
     }
     if (storedExpiry) {
       setExpiryTime(parseInt(storedExpiry, 10));
@@ -44,6 +53,7 @@ export function useGoogleCalendarToken() {
         scope: "https://www.googleapis.com/auth/calendar.events",
         prompt: "",
         callback: (res: any) => {
+          setIsConnecting(false);
           console.log("OAuth callback received:", res);
           if (res.error) {
             setError(res.error);
@@ -52,6 +62,7 @@ export function useGoogleCalendarToken() {
           } else {
             console.log("Access token received:", res.access_token);
             setAccessToken(res.access_token);
+            setGlobalToken(res.access_token);
 
             // simpan expiry time
             const expiresIn = res.expires_in ? Date.now() + res.expires_in * 1000 : null;
@@ -102,7 +113,7 @@ export function useGoogleCalendarToken() {
 
   // fungsi dipanggil tombol
   const requestAccess = () => {
-    console.log("Requesting access token...");
+    tokenClientRef.current.requestAccessToken({ prompt: "" });
     if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
       setError("Google Client ID not configured");
       return;
@@ -113,8 +124,9 @@ export function useGoogleCalendarToken() {
       alert("Token client not initialized. Please try again later.");
       return;
     }
+    setIsConnecting(true);
     tokenClientRef.current.requestAccessToken({ prompt: "" });
   };
 
-  return { accessToken, error, connect: requestAccess, isLoading };
+  return { accessToken, error, connect: requestAccess, isLoading, isConnecting };
 }

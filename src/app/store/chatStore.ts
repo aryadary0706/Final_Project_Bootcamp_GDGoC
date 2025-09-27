@@ -45,8 +45,9 @@ interface ChatState {
   createNewChat: (title?: string) => Promise<number | null>;
   loadMessages: (chatId: number) => Promise<void>;
   loadChats: () => Promise<void>;
-  sendMessage: (message: string, chatId: number) => Promise<void>;
+  sendMessage: (message: string, chatId: number, educationLevel: string, googleAccessToken?: string | null ) => Promise<void>;
   uploadFile: (file: File, chatId: number) => Promise<void>;
+
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -134,15 +135,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (message: string, chatId: number) => {
+  sendMessage: async (
+    message: string, 
+    chatId: number, 
+    educationLevel: string,
+    googleAccessToken: string | null = localStorage.getItem("google_access_token")
+  ) => {
     // Tambahkan pesan user ke UI secara optimistic
     get().addMessage('user', message);
-    
+    console.log("Sending to /api/chat/gemini:", { googleAccessToken });
     try {
       const res = await fetch('/api/chat/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, chatId }),
+        body: JSON.stringify({ message, chatId, educationLevel, googleAccessToken}),
       });
 
       const data = await res.json();

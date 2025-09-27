@@ -7,10 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const { chatId } = await params;
-    const chatIdNum = parseInt(chatId);
+    const { chatId } = await context.params;
+    const parsedChatId = parseInt(chatId, 10);
 
-    if (isNaN(chatIdNum)) {
+    if (isNaN(parsedChatId)) {
       return NextResponse.json(
         { error: "Chat ID tidak valid" },
         { status: 400 }
