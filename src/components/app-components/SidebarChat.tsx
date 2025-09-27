@@ -2,6 +2,7 @@
 
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import { Button } from "../ui/button";
+import { Upload } from "lucide-react";
 
 interface SidebarChatProps {
   chats: { id: number; title: string; last_message?: string }[];
@@ -75,8 +76,9 @@ export default function SidebarChat({
         <Button
           onClick={() => document.getElementById('file-upload')?.click()}
           variant="secondary"
-          className="w-full"
+          className="w-full flex items-center gap-2"
         >
+          <Upload className="w-4 h-4" />
           Upload Document
         </Button>
         <input
