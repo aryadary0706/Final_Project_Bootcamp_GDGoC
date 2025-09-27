@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChatStore } from "./store/chatStore";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import * as Separator from "@radix-ui/react-separator";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Paperclip, X } from "lucide-react";
 import { useGoogleCalendarToken } from "@/src/lib/useGoogleCalendarToken";
 import CalendarConnectButton from "@/src/components/app-components/CalendarConnectButton";
+
 import { useCalendarStore } from "./store/calendarStore";
+import SidebarChat from "@/src/components/app-components/SidebarChat";
 
 export default function Page() {
   const [input, setInput] = useState("");
   const [educationLevel, setEducationLevel] = useState("Kuliah");
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{name: string, size: number}>>([]);
+
 
   const {
     messages,
@@ -27,7 +32,7 @@ export default function Page() {
   } = useChatStore();
   const { accessToken } = useCalendarStore();
   const scrollRef = useRef<HTMLDivElement | null>(null);
-
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load chats saat komponen pertama kali dimuat
   useEffect(() => {
@@ -51,11 +56,43 @@ export default function Page() {
     console.log("Access token from localStorage:", localStorage.getItem('google_access_token'));
   }, [accessToken]);
 
-  const isCalendarRequest = (text: string) =>
-  /jadwal|schedule|calendar|buat.*acara|rencana/i.test(text);
+
+  const isCalendarRequest = (text: string) => /jadwal|schedule|calendar|buat.*acara|rencana/i.test(text);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setUploadedFiles(prev => [...prev, { name: file.name, size: file.size }]);
+      } else {
+        alert('Upload failed');
+      }
+    } catch (error) {
+      alert('Upload error');
+    }
+
+    // Reset input
+    event.target.value = '';
+  };
+
+  const removeUploadedFile = (fileName: string) => {
+    setUploadedFiles(prev => prev.filter(file => file.name !== fileName));
+  };
+
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && uploadedFiles.length === 0) return;
     setInput("")
     let chatId = currentChatId;
 
@@ -66,14 +103,21 @@ export default function Page() {
     }
 
     // Jika butuh kalender, pastikan token ada
-    // Jika ini permintaan kalender, pastikan token tersedia
     if (isCalendarRequest(input) && !accessToken) {
       alert("⚠️ Silakan hubungkan Google Calendar terlebih dahulu sebelum membuat jadwal.");
       return;
     }
     console.log("🚀 Mengirim pesan dengan accessToken:", accessToken);
 
+    // Include uploaded files in the message
+    if (uploadedFiles.length > 0) {
+      const fileList = uploadedFiles.map(file => `- ${file.name}`).join('\n');
+      finalMessage += `\n\n[Files uploaded for reference:\n${fileList}]`;
+    }
+
+    // 2️⃣ Tetap kirim ke AI
     await sendMessage(input, chatId, educationLevel, accessToken);
+    setUploadedFiles([]);
     setInput("");
   };
 
@@ -92,46 +136,31 @@ export default function Page() {
   };
 
   return (
-    <div className="flex w-full h-screen">
-      {/* Sidebar - Daftar Chat */}
-      <div className="w-64 border-r bg-gray-50 flex flex-col">
-        <div className="p-3 border-b">
-          <button
-            onClick={handleNewChat}
-            className="w-full px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-          >
-            + Chat Baru
-          </button>
-        </div>
+    <div className="flex w-full h-screen bg-gray-100">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.md"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
-        <ScrollArea.Root className="flex-1">
-          <ScrollArea.Viewport className="h-full w-full p-2">
-            {chats.map((chat) => (
-              <div
-                key={chat.id}
-                onClick={() => handleSelectChat(chat.id)}
-                className={`p-3 mb-2 rounded-lg cursor-pointer text-sm hover:bg-gray-100 ${
-                  currentChatId === chat.id ? 'bg-gray-200' : ''
-                }`}
-              >
-                <div className="font-medium truncate">{chat.title}</div>
-                {chat.last_message && (
-                  <div className="text-gray-500 text-xs mt-1 truncate">
-                    {chat.last_message}
-                  </div>
-                )}
-              </div>
-            ))}
-          </ScrollArea.Viewport>
-        </ScrollArea.Root>
-      </div>
+      {/* Sidebar */}
+      <SidebarChat
+        chats={chats}
+        currentChatId={currentChatId}
+        handleSelectChat={handleSelectChat}
+        handleNewChat={handleNewChat}
+      />
 
       {/* Area Chat */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-white m-3 rounded-xl shadow-sm">
+
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b">
     <div className="flex items-center gap-2">
-      
+
       <span className="font-bold text-blue-600">StudyBuddy</span>
       {/* 🔗 Tambahin tombol connect */}
       <CalendarConnectButton />
@@ -201,6 +230,7 @@ export default function Page() {
                           {msg.content}
                         </ReactMarkdown>
                       </div>
+
                     )}
                   </div>
                 </div>
@@ -218,6 +248,29 @@ export default function Page() {
 
         <Separator.Root className="bg-gray-200 h-px w-full" />
 
+        {/* Uploaded Files Display - GPT Style */}
+        {uploadedFiles.length > 0 && (
+          <div className="px-3 py-2 border-t bg-gray-50">
+            <div className="flex flex-wrap gap-2">
+              {uploadedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 text-sm"
+                >
+                  <span className="text-gray-700">{file.name}</span>
+                  <button
+                    onClick={() => removeUploadedFile(file.name)}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="Remove file"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Input Form */}
         <form
           onSubmit={(e) => {
@@ -226,6 +279,17 @@ export default function Page() {
           }}
           className="p-3 flex gap-2 border-t bg-white"
         >
+          {/* Upload Document - Paperclip Icon (leftmost, like GPT) */}
+          <button
+            type="button"
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!currentChatId}
+            title="Upload Document"
+          >
+            <Paperclip size={20} className="text-gray-500" />
+          </button>
+
           <input
             className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-400"
             value={input}
