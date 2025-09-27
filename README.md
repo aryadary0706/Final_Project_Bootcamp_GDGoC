@@ -53,7 +53,8 @@ pnpm add ai @ai-sdk/react @ai-sdk/google
 npx shadcn@latest add
 pnpm add react-markdown remark-gfm
 pnpm install zustand 
-pnpm install @google/generative-ai
+npm install @google/generative-ai
+npm install zod
 ```
 
 ### Step 3 Setup Environtment
