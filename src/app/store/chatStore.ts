@@ -6,6 +6,14 @@ interface Message {
   role: "user" | "ai";
   content: string;
   created_at?: string;
+  files?: UploadedFile[];
+}
+
+interface UploadedFile {
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
 }
 
 interface Chat {
@@ -21,19 +29,24 @@ interface ChatState {
   chats: Chat[];
   currentChatId: number | null;
   isLoading: boolean;
-  
+  uploadedFiles: UploadedFile[];
+
   // Actions
   setMessages: (messages: Message[]) => void;
-  addMessage: (role: "user" | "ai", content: string) => void;
+  addMessage: (role: "user" | "ai", content: string, files?: UploadedFile[]) => void;
   setChats: (chats: Chat[]) => void;
   setCurrentChatId: (chatId: number | null) => void;
   setLoading: (loading: boolean) => void;
-  
+  addUploadedFile: (file: UploadedFile) => void;
+  removeUploadedFile: (fileName: string) => void;
+  clearUploadedFiles: () => void;
+
   // API Actions
   createNewChat: (title?: string) => Promise<number | null>;
   loadMessages: (chatId: number) => Promise<void>;
   loadChats: () => Promise<void>;
-  sendMessage: (message: string, chatId: number, educationLevel: string) => Promise<void>;
+  sendMessage: (message: string, chatId: number) => Promise<void>;
+  uploadFile: (file: File, chatId: number) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -41,18 +54,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
   chats: [],
   currentChatId: null,
   isLoading: false,
+  uploadedFiles: [],
 
   setMessages: (messages) => set({ messages }),
-  addMessage: (role, content) =>
+  addMessage: (role, content, files = []) =>
     set((state) => ({
       messages: [
         ...state.messages,
-        { role, content, created_at: new Date().toISOString() },
+        { role, content, created_at: new Date().toISOString(), files },
       ],
     })),
   setChats: (chats) => set({ chats }),
   setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
   setLoading: (loading) => set({ isLoading: loading }),
+  addUploadedFile: (file) =>
+    set((state) => ({
+      uploadedFiles: [...state.uploadedFiles, file],
+    })),
+  removeUploadedFile: (fileName) =>
+    set((state) => ({
+      uploadedFiles: state.uploadedFiles.filter((f) => f.name !== fileName),
+    })),
+  clearUploadedFiles: () => set({ uploadedFiles: [] }),
 
   createNewChat: async (title = 'Chat Baru') => {
     try {
@@ -135,6 +158,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (error) {
       console.error('Error sending message:', error);
       get().addMessage('ai', 'Terjadi kesalahan saat menghubungi AI.');
+    }
+  },
+
+  uploadFile: async (file: File, chatId: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/chat/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const uploadedFile: UploadedFile = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: `/uploads/${file.name}`,
+        };
+        get().addUploadedFile(uploadedFile);
+        // Add a user message indicating the file upload
+        get().addMessage('user', `Uploaded file: ${file.name}`, [uploadedFile]);
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
     }
   },
 }));
